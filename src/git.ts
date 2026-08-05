@@ -41,7 +41,26 @@ function git(repositoryPath: string, args: string[]): string {
 
 export function changedFiles(repositoryPath: string, baseRef?: string): ChangedFile[] {
   const base = baseRef ?? "main";
-  const output = git(repositoryPath, ["diff", "--name-status", `${base}...HEAD`]);
+
+  // `git` is spawned via execFileSync with an argv array and no shell, so shell
+  // metacharacters in baseRef were never a risk. The real exposure was git's own
+  // option parser: `${base}...HEAD` is one argv token, and a base such as
+  // "--output=/tmp/x" made that token start with "-", so git consumed it as a
+  // flag and wrote an arbitrary file. Git forbids refnames starting with "-"
+  // (git check-ref-format), so rejecting them loses no legitimate input, and
+  // --end-of-options forces anything that follows to parse as a revision even
+  // on paths where this check is later relaxed.
+  if (base.startsWith("-")) {
+    throw new Error(`Invalid base ref (must not start with "-"): ${base}`);
+  }
+
+  const output = git(repositoryPath, [
+    "diff",
+    "--name-status",
+    "--end-of-options",
+    `${base}...HEAD`,
+    "--",
+  ]);
 
   return output
     .split("\n")
