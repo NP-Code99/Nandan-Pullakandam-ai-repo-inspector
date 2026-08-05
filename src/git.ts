@@ -32,10 +32,17 @@ export function assertGitRepository(repositoryPath: string | undefined): string 
   return repositoryPath;
 }
 
+/** Wall-clock limit for a single git invocation. Adjust here. */
+export const GIT_TIMEOUT_MS = 30_000;
+/** Max bytes captured from a single git invocation. Adjust here. */
+export const GIT_MAX_BUFFER_BYTES = 32 * 1024 * 1024;
+
 function git(repositoryPath: string, args: string[]): string {
   return execFileSync("git", args, {
     cwd: repositoryPath,
     encoding: "utf8",
+    timeout: GIT_TIMEOUT_MS,
+    maxBuffer: GIT_MAX_BUFFER_BYTES,
   }).trim();
 }
 
