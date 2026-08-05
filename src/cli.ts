@@ -15,7 +15,9 @@ function parseArgs(argv: string[]): Args {
   for (let index = 1; index < argv.length; index++) {
     const token = argv[index];
     if (token === "--repo") {
-      args.repositoryPath = argv[++index]?.split(" ")[0];
+      // argv entries are already split by the shell, so the value is the whole
+      // path verbatim; splitting on " " here truncated any path with a space.
+      args.repositoryPath = argv[++index];
     } else if (token === "--base-ref") {
       args.baseRef = argv[++index];
     } else if (token === "--format") {
