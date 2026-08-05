@@ -36,7 +36,16 @@ export function markdownReport(input: ReportInput): string {
     const fence = fenceFor(result.output);
     // The command string is caller-supplied too (MCP validationCommands), so a
     // newline in it could otherwise open a forged "## " section of its own.
-    lines.push(`### ${singleLine(result.command)}`, fence, result.output, fence);
+    lines.push(
+      `### ${singleLine(result.command)}`,
+      // Without this the report never stated pass/fail, so a reader could not
+      // tell a green run from a red one.
+      `Status: **${result.status === "passed" ? "PASSED" : "FAILED"}**`,
+      "",
+      fence,
+      result.output,
+      fence,
+    );
   }
   return lines.join("\n");
 }
