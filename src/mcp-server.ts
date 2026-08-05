@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { reviewRepository } from "./core.js";
+import { assertGitRepository } from "./git.js";
 
 const server = new McpServer({ name: "repository-inspector", version: "2.0.0" });
 
@@ -15,12 +16,23 @@ server.tool(
     validationCommands: z.array(z.string()).optional(),
   },
   async (input) => {
-    const report = await reviewRepository({
-      repositoryPath: input.repo_path,
-      baseRef: input.baseRef,
-      validationCommands: input.validationCommands,
-    });
-    return { content: [{ type: "text", text: report }] };
+    // NOTE (triage): the CLI does not yet perform this same validation, so the
+    // two interfaces still differ in how they reject a bad --repo/repo_path.
+    try {
+      const repositoryPath = assertGitRepository(input.repo_path);
+      const report = await reviewRepository({
+        repositoryPath,
+        baseRef: input.baseRef,
+        validationCommands: input.validationCommands,
+      });
+      return { content: [{ type: "text", text: report }] };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        isError: true,
+        content: [{ type: "text", text: `review_repository failed: ${message}` }],
+      };
+    }
   },
 );
 
